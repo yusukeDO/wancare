@@ -38,6 +38,7 @@
     .link-item:last-child { border-bottom: none; }
     .link-btn { color: var(--primary); font-weight: bold; text-decoration: none; word-break: break-all; }
     .icon-action-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 4px; margin-left: 4px; }
+    .schedule-badge { background: var(--primary-light); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; margin-right: 6px; }
   </style>
 </head>
 <body>
@@ -67,6 +68,12 @@
       </div>
     </div>
 
+    <!-- これからの予定カード -->
+    <div class="card">
+      <div class="card-title">📅 これからの予定</div>
+      <div id="dash-upcoming-schedules"></div>
+    </div>
+
     <div class="card">
       <div class="card-title">⏱️ 散歩距離の自動計算</div>
       <p id="timer-display" style="font-size: 1rem; font-weight: bold; margin-bottom: 8px;">ステータス: 停止中</p>
@@ -88,7 +95,7 @@
       <button class="btn" onclick="saveWalkLog()">散歩ログを保存</button>
     </div>
 
-    <!-- 本日の記録一覧（修正・削除機能付き） -->
+    <!-- 本日の記録一覧 -->
     <div class="card">
       <div class="card-title">📝 本日の記録</div>
       <div id="today-logs"></div>
@@ -228,6 +235,7 @@
 
     renderLogs();
     renderSchedules();
+    renderUpcomingSchedules();
     renderLinks();
   }
 
@@ -288,7 +296,6 @@
     renderLogs();
   }
 
-  /* 記録の修正・削除関数 */
   function editLog(index) {
     const newText = prompt('記録の内容を修正してください:', logs[index].text);
     if (newText !== null && newText.trim() !== '') {
@@ -342,6 +349,7 @@
     titleInput.value = '';
     dateInput.value = '';
     renderSchedules();
+    renderUpcomingSchedules();
     alert('予定を保存しました！');
   }
 
@@ -350,6 +358,7 @@
       schedules.splice(index, 1);
       localStorage.setItem('wancare_schedules', JSON.stringify(schedules));
       renderSchedules();
+      renderUpcomingSchedules();
     }
   }
 
@@ -363,6 +372,29 @@
       <div class="log-item">
         <span>📌 <strong>${item.date}</strong> : ${item.title}</span>
         <button class="icon-action-btn" onclick="deleteSchedule(${index})">🗑️</button>
+      </div>
+    `).join('');
+  }
+
+  function renderUpcomingSchedules() {
+    const container = document.getElementById('dash-upcoming-schedules');
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const upcoming = schedules
+      .filter(item => item.date >= todayStr)
+      .slice(0, 3);
+
+    if (upcoming.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">これからの予定はありません。</p>';
+      return;
+    }
+
+    container.innerHTML = upcoming.map(item => `
+      <div class="log-item">
+        <div>
+          <span class="schedule-badge">${item.date}</span>
+          <span>${item.title}</span>
+        </div>
       </div>
     `).join('');
   }
@@ -488,16 +520,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
