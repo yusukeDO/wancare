@@ -4,11 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ワンケア / WanCare</title>
+  <!-- グラフ描画用ライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --primary: #4A7C59; --primary-light: #EAF2EC; --secondary: #E9B44C; --accent: #D95D39; --bg: #F4F6F4; --card-bg: #FFFFFF; --text: #333333; --text-muted: #666666; --border: #E2E8F0; }
+    :root { 
+      --primary: #4A7C59; 
+      --primary-light: #EAF2EC; 
+      --secondary: #E9B44C; 
+      --accent: #D95D39; 
+      --bg: #F4F6F4; 
+      --card-bg: #FFFFFF; 
+      --text: #333333; 
+      --text-muted: #666666; 
+      --border: #E2E8F0; 
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; }
-    header { background: var(--primary); color: white; padding: 16px; text-align: center; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+    header { background: var(--primary); color: white; padding: 16px; text-align: center; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
     header h1 { font-size: 1.2rem; margin: 0; }
     .icon-btn { background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer; }
     .container { max-width: 600px; margin: 0 auto; padding: 16px; }
@@ -16,7 +28,7 @@
     .card-title { font-size: 1rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--primary); }
     .profile-header { display: flex; align-items: center; gap: 16px; }
     .profile-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-light); background: #ddd; }
-    .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+    .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
     .quick-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px; text-align: center; cursor: pointer; font-size: 0.8rem; }
     .quick-btn span { display: block; font-size: 1.5rem; margin-bottom: 4px; }
     .nav-tabs { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid var(--border); z-index: 100; }
@@ -27,33 +39,62 @@
     .tab-content.active { display: block; }
     .form-group { margin-bottom: 12px; }
     label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
-    input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
-    .btn { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+    .btn { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; transition: background 0.3s; }
     .btn-secondary { background: var(--secondary); }
     .btn-danger { background: var(--accent); }
     .flex-gap { display: flex; gap: 8px; }
     .log-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
     .log-item:last-child { border-bottom: none; }
     .link-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .link-item:last-child { border-bottom: none; }
     .link-btn { color: var(--primary); font-weight: bold; text-decoration: none; word-break: break-all; }
     .icon-action-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 4px; margin-left: 4px; }
     .schedule-badge { background: var(--primary-light); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; margin-right: 6px; }
+    .alert-badge { background: #FFE8E8; color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 6px; }
+    .theme-picker { display: flex; gap: 8px; margin-top: 8px; }
+    .theme-circle { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.2); }
+    .diary-card { border-bottom: 1px solid var(--border); padding: 12px 0; }
+    .diary-card:last-child { border-bottom: none; }
+    .diary-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
   </style>
 </head>
 <body>
 
-<header>
+<header id="main-header">
   <h1>🐾 ワンケア / WanCare</h1>
   <button class="icon-btn" onclick="switchTab('settings')">⚙️</button>
 </header>
 
 <div class="container">
+  <!-- クイック記録ボタン -->
   <div class="quick-actions">
     <div class="quick-btn" onclick="quickFeed()"><span>🍚</span>ごはん</div>
     <div class="quick-btn" onclick="quickPoo('便')"><span>💩</span>うんち</div>
     <div class="quick-btn" onclick="quickPoo('尿')"><span>💧</span>おしっこ</div>
     <div class="quick-btn" onclick="toggleWalkTimer()"><span id="walk-icon">🦮</span>散歩タイマー</div>
+  </div>
+
+  <!-- 過去ログ手動追加ボタン -->
+  <button class="btn btn-secondary" style="margin-bottom: 16px;" onclick="togglePastLogForm()">⏳ 過去の記録を追加・入力</button>
+
+  <!-- 過去ログ入力フォーム（初期非表示） -->
+  <div id="past-log-card" class="card" style="display: none;">
+    <div class="card-title">⏳ 過去の記録を手動追加</div>
+    <div class="form-group"><label>日付:</label><input type="date" id="past-date"></div>
+    <div class="form-group"><label>時間:</label><input type="time" id="past-time"></div>
+    <div class="form-group">
+      <label>種別:</label>
+      <select id="past-type">
+        <option value="ごはん">ごはん 🍚</option>
+        <option value="便">うんち 💩</option>
+        <option value="尿">おしっこ 💧</option>
+        <option value="散歩">散歩 🦮</option>
+        <option value="お薬">お薬 💊</option>
+        <option value="メモ">その他メモ 📝</option>
+      </select>
+    </div>
+    <div class="form-group"><label>内容メモ:</label><input type="text" id="past-text" placeholder="例: 完食、散歩20分など"></div>
+    <button class="btn" onclick="savePastLog()">この内容で追加</button>
   </div>
 
   <!-- ホームタブ -->
@@ -70,8 +111,14 @@
 
     <!-- これからの予定カード -->
     <div class="card">
-      <div class="card-title">📅 これからの予定</div>
+      <div class="card-title">📅 これからの予定＆リマインダー</div>
       <div id="dash-upcoming-schedules"></div>
+    </div>
+
+    <!-- 体重＆散歩グラフ -->
+    <div class="card">
+      <div class="card-title">📊 成長＆散歩記録グラフ</div>
+      <canvas id="healthChart" style="width: 100%; height: 200px;"></canvas>
     </div>
 
     <div class="card">
@@ -102,11 +149,27 @@
     </div>
   </div>
 
+  <!-- 📖 日記・アルバムタブ -->
+  <div id="tab-diary" class="tab-content">
+    <div class="card">
+      <div class="card-title">📖 新しい日記を書く</div>
+      <div class="form-group"><label>日付:</label><input type="date" id="diary-date"></div>
+      <div class="form-group"><label>タイトル:</label><input type="text" id="diary-title" placeholder="例: 初めてドッグランに行きました！"></div>
+      <div class="form-group"><label>内容メモ:</label><textarea id="diary-text" rows="3" placeholder="日記や思い出を記録..."></textarea></div>
+      <div class="form-group"><label>写真添え:</label><input type="file" id="diary-photo" accept="image/*" onchange="previewDiaryImage(event)"></div>
+      <button class="btn" onclick="saveDiary()">日記を保存する</button>
+    </div>
+    <div class="card">
+      <div class="card-title">📸 アルバム＆日記一覧</div>
+      <div id="diary-list"></div>
+    </div>
+  </div>
+
   <!-- 予定タブ -->
   <div id="tab-schedule" class="tab-content">
     <div class="card">
       <div class="card-title">📅 予定追加</div>
-      <div class="form-group"><label>予定名:</label><input type="text" id="sched-title" placeholder="例: 狂犬病予防注射"></div>
+      <div class="form-group"><label>予定名:</label><input type="text" id="sched-title" placeholder="例: 狂犬病予防注射、トリミングなど"></div>
       <div class="form-group"><label>日付:</label><input type="date" id="sched-date"></div>
       <button class="btn" onclick="addSchedule()">予定を保存する</button>
     </div>
@@ -140,10 +203,19 @@
   <!-- 設定タブ -->
   <div id="tab-settings" class="tab-content">
     <div class="card">
+      <div class="card-title">🎨 アプリのカラー選択</div>
+      <div class="theme-picker">
+        <div class="theme-circle" style="background:#4A7C59;" onclick="setTheme('#4A7C59', '#EAF2EC')"></div>
+        <div class="theme-circle" style="background:#D87093;" onclick="setTheme('#D87093', '#FCE4EC')"></div>
+        <div class="theme-circle" style="background:#4682B4;" onclick="setTheme('#4682B4', '#E1F5FE')"></div>
+        <div class="theme-circle" style="background:#E9B44C;" onclick="setTheme('#E9B44C', '#FFF8E1')"></div>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">⚙️ 愛犬設定</div>
       <div class="form-group"><label>愛犬の名前:</label><input type="text" id="set-name" placeholder="例: こなつ"></div>
       <div class="form-group"><label>犬種:</label><input type="text" id="set-breed" placeholder="例: トイプードル"></div>
-      
       <div class="form-group">
         <label>性別:</label>
         <select id="set-gender">
@@ -153,17 +225,8 @@
           <option value="女の子(避妊済) ♀">女の子(避妊済) ♀</option>
         </select>
       </div>
-      
-      <div class="form-group">
-        <label>生年月日（誕生日）:</label>
-        <input type="date" id="set-birthdate">
-      </div>
-
-      <div class="form-group">
-        <label>体重 (kg):</label>
-        <input type="number" id="set-weight" step="0.1" placeholder="例: 3.2">
-      </div>
-      
+      <div class="form-group"><label>生年月日（誕生日）:</label><input type="date" id="set-birthdate"></div>
+      <div class="form-group"><label>体重 (kg):</label><input type="number" id="set-weight" step="0.1" placeholder="例: 3.2"></div>
       <div class="form-group"><label>写真変更:</label><input type="file" id="set-photo" accept="image/*" onchange="previewImage(event)"></div>
       <button class="btn" onclick="saveSettings()">設定保存</button>
     </div>
@@ -176,6 +239,7 @@
 
 <div class="nav-tabs">
   <button class="tab-btn active" onclick="switchTab('dashboard')"><span>🏠</span>ホーム</button>
+  <button class="tab-btn" onclick="switchTab('diary')"><span>📖</span>日記</button>
   <button class="tab-btn" onclick="switchTab('schedule')"><span>📅</span>予定</button>
   <button class="tab-btn" onclick="switchTab('links')"><span>🛍️</span>ショップ</button>
   <button class="tab-btn" onclick="switchTab('settings')"><span>⚙️</span>設定</button>
@@ -186,17 +250,19 @@
   let settings = {};
   let schedules = [];
   let customLinks = [];
+  let diaries = [];
+  let weightHistory = [];
   let pendingPhoto = null;
+  let pendingDiaryPhoto = null;
   let walkStartTime = null;
+  let healthChart = null;
 
   function calculateAge(birthdateStr) {
     if (!birthdateStr) return '年齢未設定';
     const birthDate = new Date(birthdateStr);
     const today = new Date();
-    
     let years = today.getFullYear() - birthDate.getFullYear();
     let months = today.getMonth() - birthDate.getMonth();
-    
     if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
       years--;
       months += 12;
@@ -205,7 +271,6 @@
       months--;
       if (months < 0) months += 12;
     }
-
     if (years < 0) return '0歳 0ヶ月';
     return `${years}歳 ${months}ヶ月`;
   }
@@ -215,6 +280,12 @@
     settings = JSON.parse(localStorage.getItem('wancare_settings') || '{}');
     schedules = JSON.parse(localStorage.getItem('wancare_schedules') || '[]');
     customLinks = JSON.parse(localStorage.getItem('wancare_links') || '[]');
+    diaries = JSON.parse(localStorage.getItem('wancare_diaries') || '[]');
+    weightHistory = JSON.parse(localStorage.getItem('wancare_weight_history') || '[]');
+
+    if (settings.themeColor) {
+      applyTheme(settings.themeColor, settings.themeLight);
+    }
 
     document.getElementById('dash-name').innerText = settings.name || '愛犬名未設定';
     const ageText = calculateAge(settings.birthdate);
@@ -233,16 +304,58 @@
     document.getElementById('set-birthdate').value = settings.birthdate || '';
     document.getElementById('set-weight').value = settings.weight || '';
 
+    // 今日の日付を過去入力フォーム・日記フォームのデフォルトに設定
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('past-date').value = todayStr;
+    document.getElementById('diary-date').value = todayStr;
+
     renderLogs();
     renderSchedules();
     renderUpcomingSchedules();
     renderLinks();
+    renderDiaries();
+    initChart();
   }
 
   function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('tab-' + tabId).classList.add('active');
+  }
+
+  function setTheme(primary, light) {
+    settings.themeColor = primary;
+    settings.themeLight = light;
+    localStorage.setItem('wancare_settings', JSON.stringify(settings));
+    applyTheme(primary, light);
+  }
+
+  function applyTheme(primary, light) {
+    document.documentElement.style.setProperty('--primary', primary);
+    document.documentElement.style.setProperty('--primary-light', light);
+  }
+
+  function togglePastLogForm() {
+    const card = document.getElementById('past-log-card');
+    card.style.display = (card.style.display === 'none') ? 'block' : 'none';
+  }
+
+  function savePastLog() {
+    const date = document.getElementById('past-date').value;
+    const time = document.getElementById('past-time').value || '00:00';
+    const type = document.getElementById('past-type').value;
+    const text = document.getElementById('past-text').value.trim() || '記録完了';
+
+    if (!date) {
+      alert('日付を入力してください。');
+      return;
+    }
+
+    logs.unshift({ type: type, text: text, time: `${date} ${time}` });
+    saveLogs();
+    document.getElementById('past-text').value = '';
+    togglePastLogForm();
+    alert('過去の記録を追加しました！');
   }
 
   function quickFeed() {
@@ -294,6 +407,7 @@
   function saveLogs() {
     localStorage.setItem('wancare_logs', JSON.stringify(logs));
     renderLogs();
+    initChart();
   }
 
   function editLog(index) {
@@ -317,7 +431,7 @@
       container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">本日の記録はありません。</p>';
       return;
     }
-    container.innerHTML = logs.map((log, index) => `
+    container.innerHTML = logs.slice(0, 10).map((log, index) => `
       <div class="log-item">
         <div>
           <span><strong>[${log.type}]</strong> ${log.text}</span>
@@ -389,14 +503,124 @@
       return;
     }
 
-    container.innerHTML = upcoming.map(item => `
-      <div class="log-item">
-        <div>
-          <span class="schedule-badge">${item.date}</span>
-          <span>${item.title}</span>
+    const alertKeywords = ['注射', '予防', 'ワクチン', 'トリミング', '病院'];
+
+    container.innerHTML = upcoming.map(item => {
+      const isAlert = alertKeywords.some(kw => item.title.includes(kw));
+      return `
+        <div class="log-item">
+          <div>
+            <span class="schedule-badge">${item.date}</span>
+            <span>${item.title}</span>
+            ${isAlert ? '<span class="alert-badge">🔔 通知</span>' : ''}
+          </div>
         </div>
+      `;
+    }).join('');
+  }
+
+  /* 📖 日記・アルバム機能 */
+  function saveDiary() {
+    const date = document.getElementById('diary-date').value;
+    const title = document.getElementById('diary-title').value.trim();
+    const text = document.getElementById('diary-text').value.trim();
+
+    if (!date || !title) {
+      alert('「日付」と「タイトル」を入力してください。');
+      return;
+    }
+
+    diaries.unshift({ date: date, title: title, text: text, photo: pendingDiaryPhoto });
+    localStorage.setItem('wancare_diaries', JSON.stringify(diaries));
+
+    document.getElementById('diary-title').value = '';
+    document.getElementById('diary-text').value = '';
+    pendingDiaryPhoto = null;
+    renderDiaries();
+    alert('日記を保存しました！');
+  }
+
+  function deleteDiary(index) {
+    if (confirm('この日記を削除しますか？')) {
+      diaries.splice(index, 1);
+      localStorage.setItem('wancare_diaries', JSON.stringify(diaries));
+      renderDiaries();
+    }
+  }
+
+  function renderDiaries() {
+    const container = document.getElementById('diary-list');
+    if (diaries.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">登録された日記はありません。</p>';
+      return;
+    }
+    container.innerHTML = diaries.map((item, index) => `
+      <div class="diary-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>📖 ${item.title}</strong>
+          <div>
+            <span style="font-size:0.8rem; color:var(--text-muted);">${item.date}</span>
+            <button class="icon-action-btn" onclick="deleteDiary(${index})">🗑️</button>
+          </div>
+        </div>
+        ${item.text ? `<p style="font-size:0.85rem; margin-top:6px;">${item.text}</p>` : ''}
+        ${item.photo ? `<img src="${item.photo}" class="diary-img">` : ''}
       </div>
     `).join('');
+  }
+
+  function previewDiaryImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const max_size = 400;
+        let width = img.width, height = img.height;
+        if (width > height) {
+          if (width > max_size) { height *= max_size / width; width = max_size; }
+        } else {
+          if (height > max_size) { width *= max_size / height; height = max_size; }
+        }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        pendingDiaryPhoto = canvas.toDataURL('image/jpeg', 0.7);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* 📊 体重＆散歩グラフ表示機能 */
+  function initChart() {
+    const ctx = document.getElementById('healthChart').getContext('2d');
+    const recentLogs = logs.filter(l => l.type === '散歩' && l.text.includes('km')).slice(0, 5).reverse();
+    const labels = recentLogs.map(l => l.time.split(' ')[0] || '直近');
+    const distData = recentLogs.map(l => parseFloat(l.text.replace('km', '')) || 0);
+
+    if (healthChart) healthChart.destroy();
+
+    healthChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels.length > 0 ? labels : ['記録なし'],
+        datasets: [{
+          label: '散歩距離 (km)',
+          data: distData.length > 0 ? distData : [0],
+          borderColor: '#4A7C59',
+          backgroundColor: 'rgba(74, 124, 89, 0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
   }
 
   function addCustomLink() {
@@ -416,9 +640,7 @@
 
     customLinks.push({ name: name, url: url });
     localStorage.setItem('wancare_links', JSON.stringify(customLinks));
-    
-    nameInput.value = '';
-    urlInput.value = '';
+    nameInput.value = ''; urlInput.value = '';
     renderLinks();
     alert('ショップ・病院を追加しました！');
   }
@@ -447,15 +669,20 @@
 
   function saveSettings() {
     try {
+      const newWeight = document.getElementById('set-weight').value;
       settings.name = document.getElementById('set-name').value;
       settings.breed = document.getElementById('set-breed').value;
       settings.gender = document.getElementById('set-gender').value;
       settings.birthdate = document.getElementById('set-birthdate').value;
-      settings.weight = document.getElementById('set-weight').value;
-      
-      if (pendingPhoto) {
-        settings.photo = pendingPhoto;
+      settings.weight = newWeight;
+
+      if (newWeight) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        weightHistory.push({ date: todayStr, weight: parseFloat(newWeight) });
+        localStorage.setItem('wancare_weight_history', JSON.stringify(weightHistory));
       }
+      
+      if (pendingPhoto) settings.photo = pendingPhoto;
 
       localStorage.setItem('wancare_settings', JSON.stringify(settings));
       init();
@@ -469,32 +696,21 @@
   function previewImage(event) {
     const file = event.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
         const canvas = document.createElement('canvas');
         const max_size = 300;
-        let width = img.width;
-        let height = img.height;
-
+        let width = img.width, height = img.height;
         if (width > height) {
-          if (width > max_size) {
-            height *= max_size / width;
-            width = max_size;
-          }
+          if (width > max_size) { height *= max_size / width; width = max_size; }
         } else {
-          if (height > max_size) {
-            width *= max_size / height;
-            height = max_size;
-          }
+          if (height > max_size) { width *= max_size / height; height = max_size; }
         }
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-
         pendingPhoto = canvas.toDataURL('image/jpeg', 0.7);
         document.getElementById('dash-photo').src = pendingPhoto;
       };
@@ -509,6 +725,8 @@
       localStorage.removeItem('wancare_settings');
       localStorage.removeItem('wancare_schedules');
       localStorage.removeItem('wancare_links');
+      localStorage.removeItem('wancare_diaries');
+      localStorage.removeItem('wancare_weight_history');
       pendingPhoto = null;
       init();
       alert('すべてのデータを初期化しました。');
