@@ -8,8 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root { 
-      --primary: #4A7C59; 
-      --primary-light: #EAF2EC; 
+      --primary: #4682B4; 
+      --primary-light: #E1F5FE; 
       --secondary: #E9B44C; 
       --accent: #D95D39; 
       --bg: #F4F6F4; 
@@ -26,9 +26,23 @@
     .container { max-width: 600px; margin: 0 auto; padding: 16px; }
     .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 1rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--primary); }
+    
+    /* プロフィールカードデザイン調整 */
+    .profile-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
     .profile-header { display: flex; align-items: center; gap: 16px; }
-    .profile-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-light); background: #ddd; }
-    .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .profile-avatar { width: 75px; height: 75px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-light); flex-shrink: 0; }
+    .profile-info { flex: 1; }
+    .profile-name { font-size: 1.3rem; font-weight: bold; color: var(--text); margin-bottom: 6px; }
+    .profile-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .profile-tag { background: var(--primary-light); color: var(--primary); font-size: 0.78rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+
+    .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
     .quick-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px; text-align: center; cursor: pointer; font-size: 0.8rem; }
     .quick-btn span { display: block; font-size: 1.5rem; margin-bottom: 4px; }
     .nav-tabs { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid var(--border); z-index: 100; }
@@ -99,12 +113,18 @@
 
   <!-- ホームタブ -->
   <div id="tab-dashboard" class="tab-content active">
-    <div class="card">
+    <!-- 見やすく整理した愛犬プロフィールカード -->
+    <div class="profile-card">
       <div class="profile-header">
         <img id="dash-photo" src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200" class="profile-avatar" alt="愛犬">
-        <div>
-          <h2 id="dash-name" style="font-size:1.2rem;">愛犬名未設定</h2>
-          <p id="dash-info" style="font-size:0.85rem; color:var(--text-muted);">犬種未設定 / 性別未設定 / 年齢未設定 / 体重未設定</p>
+        <div class="profile-info">
+          <div id="dash-name" class="profile-name">愛犬名未設定</div>
+          <div class="profile-tags">
+            <span id="dash-breed" class="profile-tag">犬種未設定</span>
+            <span id="dash-gender" class="profile-tag">性別未設定</span>
+            <span id="dash-age" class="profile-tag">年齢未設定</span>
+            <span id="dash-weight" class="profile-tag">体重未設定</span>
+          </div>
         </div>
       </div>
     </div>
@@ -205,9 +225,9 @@
     <div class="card">
       <div class="card-title">🎨 アプリのカラー選択</div>
       <div class="theme-picker">
+        <div class="theme-circle" style="background:#4682B4;" onclick="setTheme('#4682B4', '#E1F5FE')"></div>
         <div class="theme-circle" style="background:#4A7C59;" onclick="setTheme('#4A7C59', '#EAF2EC')"></div>
         <div class="theme-circle" style="background:#D87093;" onclick="setTheme('#D87093', '#FCE4EC')"></div>
-        <div class="theme-circle" style="background:#4682B4;" onclick="setTheme('#4682B4', '#E1F5FE')"></div>
         <div class="theme-circle" style="background:#E9B44C;" onclick="setTheme('#E9B44C', '#FFF8E1')"></div>
       </div>
     </div>
@@ -288,12 +308,10 @@
     }
 
     document.getElementById('dash-name').innerText = settings.name || '愛犬名未設定';
-    const ageText = calculateAge(settings.birthdate);
-    const genderText = settings.gender || '性別未設定';
-    const breedText = settings.breed || '犬種未設定';
-    const weightText = settings.weight ? `${settings.weight} kg` : '体重未設定';
-    
-    document.getElementById('dash-info').innerText = `${breedText} / ${genderText} / ${ageText} / ${weightText}`;
+    document.getElementById('dash-breed').innerText = settings.breed || '犬種未設定';
+    document.getElementById('dash-gender').innerText = settings.gender || '性別未設定';
+    document.getElementById('dash-age').innerText = calculateAge(settings.birthdate);
+    document.getElementById('dash-weight').innerText = settings.weight ? `${settings.weight} kg` : '体重未設定';
 
     const defaultPhoto = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200";
     document.getElementById('dash-photo').src = settings.photo || defaultPhoto;
@@ -304,7 +322,6 @@
     document.getElementById('set-birthdate').value = settings.birthdate || '';
     document.getElementById('set-weight').value = settings.weight || '';
 
-    // 今日の日付を過去入力フォーム・日記フォームのデフォルトに設定
     const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('past-date').value = todayStr;
     document.getElementById('diary-date').value = todayStr;
@@ -519,7 +536,6 @@
     }).join('');
   }
 
-  /* 📖 日記・アルバム機能 */
   function saveDiary() {
     const date = document.getElementById('diary-date').value;
     const title = document.getElementById('diary-title').value.trim();
@@ -594,7 +610,6 @@
     reader.readAsDataURL(file);
   }
 
-  /* 📊 体重＆散歩グラフ表示機能 */
   function initChart() {
     const ctx = document.getElementById('healthChart').getContext('2d');
     const recentLogs = logs.filter(l => l.type === '散歩' && l.text.includes('km')).slice(0, 5).reverse();
@@ -610,8 +625,8 @@
         datasets: [{
           label: '散歩距離 (km)',
           data: distData.length > 0 ? distData : [0],
-          borderColor: '#4A7C59',
-          backgroundColor: 'rgba(74, 124, 89, 0.1)',
+          borderColor: '#4682B4',
+          backgroundColor: 'rgba(70, 130, 180, 0.1)',
           fill: true,
           tension: 0.3
         }]
