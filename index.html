@@ -57,6 +57,7 @@
     .btn { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; transition: background 0.3s; }
     .btn-secondary { background: var(--secondary); }
     .btn-danger { background: var(--accent); }
+    .btn-gps { background: #28a745; color: white; }
     .flex-gap { display: flex; gap: 8px; }
     .log-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
     .log-item:last-child { border-bottom: none; }
@@ -70,6 +71,8 @@
     .diary-card { border-bottom: 1px solid var(--border); padding: 12px 0; }
     .diary-card:last-child { border-bottom: none; }
     .diary-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+    .gps-btn-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+    .gps-search-btn { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); padding: 10px 4px; border-radius: 8px; font-size: 0.78rem; font-weight: bold; text-align: center; text-decoration: none; display: block; }
   </style>
 </head>
 <body>
@@ -89,7 +92,7 @@
     <div class="quick-btn" onclick="quickFeed()"><span>🍚</span>ごはん</div>
     <div class="quick-btn" onclick="quickPoo('便')"><span>💩</span>うんち</div>
     <div class="quick-btn" onclick="quickPoo('尿')"><span>💧</span>おしっこ</div>
-    <div class="quick-btn" onclick="toggleWalkTimer()"><span id="walk-icon">🦮</span>散歩タイマー</div>
+    <div class="quick-btn" onclick="toggleGpsWalk()"><span id="walk-icon">🦮</span>GPS散歩</div>
   </div>
 
   <!-- 過去ログ手動追加ボタン -->
@@ -132,6 +135,17 @@
       </div>
     </div>
 
+    <!-- GPS散歩トラッカーカード -->
+    <div class="card">
+      <div class="card-title">🛰️ GPS散歩トラッカー</div>
+      <p id="gps-status" style="font-size: 0.95rem; font-weight: bold; margin-bottom: 6px;">ステータス: 停止中</p>
+      <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:var(--text-muted); margin-bottom:8px;">
+        <span>移動距離: <strong id="gps-dist-display" style="color:var(--primary); font-size:1.1rem;">0.00</strong> km</span>
+        <span>経過時間: <strong id="gps-time-display" style="color:var(--text); font-size:1.1rem;">0</strong> 分</span>
+      </div>
+      <button id="gps-toggle-btn" class="btn btn-gps" onclick="toggleGpsWalk()">🛰️ GPS散歩スタート</button>
+    </div>
+
     <!-- これからの予定カード -->
     <div class="card">
       <div class="card-title">📅 これからの予定＆リマインダー</div>
@@ -145,8 +159,7 @@
     </div>
 
     <div class="card">
-      <div class="card-title">⏱️ 散歩距離の自動計算</div>
-      <p id="timer-display" style="font-size: 1rem; font-weight: bold; margin-bottom: 8px;">ステータス: 停止中</p>
+      <div class="card-title">⏱️ 歩数からの距離簡易計算</div>
       <div class="form-group">
         <label>歩数を入力:</label>
         <div class="flex-gap">
@@ -162,7 +175,7 @@
         <label>計算結果 (km):</label>
         <input type="number" id="walk-dist" step="0.01" readonly style="background:#f0f0f0;">
       </div>
-      <button class="btn" onclick="saveWalkLog()">散歩ログを保存</button>
+      <button class="btn" onclick="saveWalkLog()">歩数ログを保存</button>
     </div>
 
     <!-- 本日の記録一覧 -->
@@ -204,8 +217,19 @@
 
   <!-- ショップタブ -->
   <div id="tab-links" class="tab-content">
+    <!-- GPS周辺マップ検索機能 -->
     <div class="card">
-      <div class="card-title">🛍️ ショップ・病院の登録</div>
+      <div class="card-title">📍 GPSで周辺スポットを探す</div>
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:8px;">現在地近くのおでかけスポットや施設をマップ検索できます。</p>
+      <div class="gps-btn-group">
+        <a id="search-cafe" class="gps-search-btn" href="#" target="_blank" onclick="searchNearby('ペット可 カフェ')">☕ ペット可カフェ</a>
+        <a id="search-shop" class="gps-search-btn" href="#" target="_blank" onclick="searchNearby('ペットショップ')">🐶 ペットショップ</a>
+        <a id="search-hospital" class="gps-search-btn" href="#" target="_blank" onclick="searchNearby('動物病院')">🏥 動物病院</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🛍️ マイショップ・病院の登録</div>
       <div class="form-group">
         <label>ショップ・病院の名前:</label>
         <input type="text" id="link-name" placeholder="例: かかりつけ動物病院">
@@ -275,8 +299,14 @@
   let customLinks = [];
   let pendingPhoto = null;
   let pendingDiaryPhoto = null;
-  let walkStartTime = null;
   let healthChart = null;
+
+  /* GPS散歩用変数 */
+  let gpsWatchId = null;
+  let gpsStartTime = null;
+  let gpsLastPos = null;
+  let gpsTotalDistance = 0;
+  let gpsTimerInterval = null;
 
   function calculateAge(birthdateStr) {
     if (!birthdateStr) return '年齢未設定';
@@ -285,8 +315,7 @@
     let years = today.getFullYear() - birthDate.getFullYear();
     let months = today.getMonth() - birthDate.getMonth();
     if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
-      years--;
-      months += 12;
+      years--; months += 12;
     }
     if (today.getDate() < birthDate.getDate()) {
       months--;
@@ -345,9 +374,7 @@
       pets.push({
         id: Date.now(),
         settings: { name: name },
-        logs: [],
-        schedules: [],
-        diaries: []
+        logs: [], schedules: [], diaries: []
       });
       currentPetIndex = pets.length - 1;
       savePetsToStorage();
@@ -370,13 +397,8 @@
     }
   }
 
-  function getCurrentPet() {
-    return pets[currentPetIndex];
-  }
-
-  function savePetsToStorage() {
-    localStorage.setItem('wancare_pets', JSON.stringify(pets));
-  }
+  function getCurrentPet() { return pets[currentPetIndex]; }
+  function savePetsToStorage() { localStorage.setItem('wancare_pets', JSON.stringify(pets)); }
 
   function loadCurrentPetData() {
     const pet = getCurrentPet();
@@ -451,7 +473,6 @@
     alert('過去の記録を追加しました！');
   }
 
-  /* ごはんのグラム数入力機能 */
   function quickFeed() {
     const amount = prompt('与えたご飯の量（グラム）を入力してください:', '30');
     if (amount !== null) {
@@ -472,23 +493,100 @@
     renderLogs();
   }
 
-  function toggleWalkTimer() {
-    const display = document.getElementById('timer-display');
-    const icon = document.getElementById('walk-icon');
-    if (!walkStartTime) {
-      walkStartTime = new Date();
-      display.innerText = 'ステータス: 散歩中...';
-      icon.innerText = '⏹️';
+  /* 🛰️ GPS散歩機能のロジック */
+  function toggleGpsWalk() {
+    const btn = document.getElementById('gps-toggle-btn');
+    const status = document.getElementById('gps-status');
+
+    if (!gpsWatchId) {
+      if (!navigator.geolocation) {
+        alert('お使いの端末はGPS位置情報機能に対応していません。');
+        return;
+      }
+      gpsStartTime = new Date();
+      gpsTotalDistance = 0;
+      gpsLastPos = null;
+
+      document.getElementById('gps-dist-display').innerText = '0.00';
+      document.getElementById('gps-time-display').innerText = '0';
+      status.innerText = 'ステータス: 🛰️ GPS追跡中...';
+      btn.innerText = '⏹️ 散歩を終了して記録';
+      btn.style.background = 'var(--accent)';
+
+      gpsWatchId = navigator.geolocation.watchPosition(
+        pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          if (gpsLastPos) {
+            const d = getDistanceKm(gpsLastPos.lat, gpsLastPos.lon, lat, lon);
+            if (d > 0.003) { //ノイズ防止（3m以上の移動で計測）
+              gpsTotalDistance += d;
+              document.getElementById('gps-dist-display').innerText = gpsTotalDistance.toFixed(2);
+            }
+          }
+          gpsLastPos = { lat: lat, lon: lon };
+        },
+        err => console.warn('GPSエラー:', err),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+      );
+
+      gpsTimerInterval = setInterval(() => {
+        const mins = Math.round((new Date() - gpsStartTime) / 60000);
+        document.getElementById('gps-time-display').innerText = mins;
+      }, 10000);
+
     } else {
-      const duration = Math.round((new Date() - walkStartTime) / 60000);
-      const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      navigator.geolocation.clearWatch(gpsWatchId);
+      clearInterval(gpsTimerInterval);
+      gpsWatchId = null;
+
+      const duration = Math.round((new Date() - gpsStartTime) / 60000);
+      const dist = gpsTotalDistance.toFixed(2);
+      const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
       const pet = getCurrentPet();
-      pet.logs.unshift({ type: '散歩', text: `${duration}分間`, time: time });
+      pet.logs.unshift({ type: '散歩', text: `GPS計測: ${dist} km (${duration}分間)`, time: timeStr });
       savePetsToStorage();
       renderLogs();
-      walkStartTime = null;
-      display.innerText = 'ステータス: 停止中';
-      icon.innerText = '🦮';
+      initChart();
+
+      status.innerText = 'ステータス: 停止中';
+      btn.innerText = '🛰️ GPS散歩スタート';
+      btn.style.background = '#28a745';
+      alert(`散歩ログを保存しました！\n距離: ${dist} km / 時間: ${duration}分`);
+    }
+  }
+
+  // 2点間の緯度経度から距離(km)を計算するヒュベニの公式
+  function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  /* 📍 GPS周辺検索機能 */
+  function searchNearby(keyword) {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const url = `https://www.google.com/maps/search/${encodeURIComponent(keyword)}/@${lat},${lon},14z`;
+          window.open(url, '_blank');
+        },
+        () => {
+          const url = `https://www.google.com/maps/search/${encodeURIComponent(keyword)}`;
+          window.open(url, '_blank');
+        }
+      );
+    } else {
+      const url = `https://www.google.com/maps/search/${encodeURIComponent(keyword)}`;
+      window.open(url, '_blank');
     }
   }
 
@@ -707,7 +805,7 @@
     const logs = pet.logs || [];
     const recentLogs = logs.filter(l => l.type === '散歩' && l.text.includes('km')).slice(0, 5).reverse();
     const labels = recentLogs.map(l => l.time.split(' ')[0] || '直近');
-    const distData = recentLogs.map(l => parseFloat(l.text.replace('km', '')) || 0);
+    const distData = recentLogs.map(l => parseFloat(l.text.replace(/[^0-9.]/g, '')) || 0);
 
     if (healthChart) healthChart.destroy();
 
